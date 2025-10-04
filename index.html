@@ -59,8 +59,11 @@
       mindar-image="imageTargetSrc: marker.mind; stabilizationThreshold: 0; filterMinCF: 0.1; filterBeta: 500; warmupTolerance: 1; missTolerance: 1; videoSettings: { width: {ideal: 2560}, height: {ideal: 1440}, facingMode: 'environment' }"
       color-space="sRGB"
       renderer="colorManagement: true, physicallyCorrectLights: true, antialias: true, precision: high"
+      embedded
       vr-mode-ui="enabled: false"
-      device-orientation-permission-ui="enabled: false">
+      device-orientation-permission-ui="enabled: false"
+      arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false"   
+      >
 
       <a-assets>
         <a-asset-item id="avatarModel" src="modello.glb"></a-asset-item>
@@ -78,7 +81,8 @@
           src="#avatarModel"
           position="0 0.4 0.1"
           scale="0.008 0.008 0.008"
-          rotation="0 180 0">
+          rotation="0 180 0"
+          look-at="[camera]" visible="true">
         </a-gltf-model>
       </a-entity>
 
