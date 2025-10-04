@@ -34,7 +34,7 @@
         transform: translateX(-50%);
         width: 70px;
         height: 70px;
-        background-color: #b8b8b880;
+        background-color: #5141aa80;
         color: white;
         border: none;
         border-radius: 50%;
@@ -132,7 +132,7 @@ AFRAME.registerComponent('smooth-follow', {
     mincutoff: {default: 5.0}, 
     beta: {default: 0.01},
     dcutoff: {default: 2},
-    movementThreshold: {default: 0.3}, // mínimo cambio para actualizar
+    movementThreshold: {default: 1}, // mínimo cambio para actualizar
     frameWindow: {default: 5} // cantidad de frames para promedio móvil
   },
   init: function () {
