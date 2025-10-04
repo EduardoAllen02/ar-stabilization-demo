@@ -34,7 +34,7 @@
         transform: translateX(-50%);
         width: 70px;
         height: 70px;
-        background-color: rgba(136, 221, 255, 0.5);
+        background-color: rgba(229, 255, 136, 0.5);
         color: white;
         border: none;
         border-radius: 50%;
@@ -55,14 +55,13 @@
     <button id="action-button" class="button">●</button>
     <div id="notification">Screenshot saved!</div>
 
-    <a-scene
+  <a-scene
   mindar-image="imageTargetSrc: marker.mind; stabilizationThreshold: 0; filterMinCF: 0.1; filterBeta: 500; warmupTolerance: 1; missTolerance: 1;
   videoSettings: { width: {ideal: 2560}, height: {ideal: 1440}, facingMode: 'environment' }"
   color-space="sRGB"
   renderer="colorManagement: true; physicallyCorrectLights: true; antialias: true; precision: high"
   vr-mode-ui="enabled: false"
   device-orientation-permission-ui="enabled: false"
-  embedded
 >
   <a-assets>
     <a-asset-item id="avatarModel" src="modello.glb"></a-asset-item>
@@ -94,7 +93,6 @@ AFRAME.registerComponent('smooth-follow', {
   init: function () {
     this.lastUpdateTime = 0;
     this.lastVisible = false;
-    this.targetMatrix = new THREE.Matrix4();
     this.smoothPosition = new THREE.Vector3();
     this.smoothQuaternion = new THREE.Quaternion();
     this.smoothScale = new THREE.Vector3(1, 1, 1);
@@ -102,27 +100,24 @@ AFRAME.registerComponent('smooth-follow', {
   tick: function (time, delta) {
     const el = this.el;
     const object3D = el.object3D;
+
+    // Accede a la instancia de MindAR
     const mindarComp = el.sceneEl.components['mindar-image'];
-    if (!mindarComp) return;
+    if (!mindarComp || !mindarComp.controller || !mindarComp.controller.trackers) return;
 
-    const target = mindarComp.imageTrackers[0];
-    if (!target || !target.controller) return;
-    const visible = target.controller.visible;
+    // Obtén el tracker asociado al targetIndex de este entity
+    const targetIndex = el.getAttribute('mindar-image-target').targetIndex || 0;
+    const tracker = mindarComp.controller.trackers.find(t => t.targetIndex === targetIndex);
+    if (!tracker || !tracker.visible) return;
 
-    // Si el target no está visible, no mover nada (mantener quieto)
-    if (!visible) {
-      this.lastVisible = false;
-      return;
-    }
-
-    // Actualiza solo cada cierto intervalo
+    // Solo actualiza cada cierto intervalo
     if (time - this.lastUpdateTime < this.data.updateInterval) return;
     this.lastUpdateTime = time;
 
-    // Obtén la matriz de transformación actual del target
-    target.controller.matrix.decompose(this.smoothPosition, this.smoothQuaternion, this.smoothScale);
+    // Descompone la matriz de transformación
+    tracker.matrix.decompose(this.smoothPosition, this.smoothQuaternion, this.smoothScale);
 
-    // Suavizado (interpolación)
+    // Interpolación para suavizado
     object3D.position.lerp(this.smoothPosition, this.data.lerpFactor);
     object3D.quaternion.slerp(this.smoothQuaternion, this.data.lerpFactor);
     object3D.scale.lerp(this.smoothScale, this.data.lerpFactor);
@@ -131,6 +126,7 @@ AFRAME.registerComponent('smooth-follow', {
   }
 });
 </script>
+
 
   </body>
 </html>
