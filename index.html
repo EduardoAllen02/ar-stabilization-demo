@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+    <script src="./screenshot.js"></script>
+    <style>
+      a-scene {
+        z-index: 10;
+        pointer-events: none;
+      }
+      #notification {
+        position: fixed;
+        width: 100%;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 10px 20px;
+        border-radius: 5px;
+        z-index: 5000;
+        display: none;
+      }
+      .button {
+        -webkit-tap-highlight-color: transparent;
+        -webkit-user-select: none;
+        -webkit-touch-callout: none;
+        outline: none;
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 70px;
+        height: 70px;
+        background-color: rgba(128, 128, 128, 0.5);
+        color: white;
+        border: none;
+        border-radius: 50%;
+        cursor: pointer;
+        z-index: 10;
+        user-select: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        transition: background-color 0.3s ease;
+      }
+      .button:active { background-color: rgba(200, 200, 200, 0.7); }
+      .recording { border: 3px solid red; box-shadow: 0 0 10px red; }
+    </style>
+  </head>
+  <body>
+    <button id="action-button" class="button">●</button>
+    <div id="notification">Screenshot saved!</div>
+
+    <a-scene
+      mindar-image="imageTargetSrc: marker.mind; stabilizationThreshold: 0; filterMinCF: 0.1; filterBeta: 500; warmupTolerance: 1; missTolerance: 1; videoSettings: { width: {ideal: 2560}, height: {ideal: 1440}, facingMode: 'environment' }"
+      color-space="sRGB"
+      renderer="colorManagement: true, physicallyCorrectLights: true, antialias: true, precision: high"
+      vr-mode-ui="enabled: false"
+      device-orientation-permission-ui="enabled: false">
+
+      <a-assets>
+        <a-asset-item id="avatarModel" src="modello.glb"></a-asset-item>
+      </a-assets>
+
+      <!-- Luci morbide per migliorare il modello -->
+      <a-entity light="type: hemisphere; intensity: 0.8; color: #ffffff; groundColor: #888888"></a-entity>
+      <a-light type="directional" position="0 -5 0" intensity="0.6"></a-light>
+      <a-light type="ambient" intensity="0.2"></a-light>
+
+      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+      <a-entity mindar-image-target>
+        <a-gltf-model
+          src="#avatarModel"
+          position="0 0.4 0.1"
+          scale="0.008 0.008 0.008"
+          rotation="0 180 0">
+        </a-gltf-model>
+      </a-entity>
+
+    </a-scene>
+  </body>
+</html>
