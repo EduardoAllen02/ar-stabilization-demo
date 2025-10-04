@@ -34,7 +34,7 @@
         transform: translateX(-50%);
         width: 70px;
         height: 70px;
-        background-color: rgba(103, 76, 167, 0.5);
+        background-color: rgba(167, 76, 103, 0.5);
         color: white;
         border: none;
         border-radius: 50%;
@@ -56,7 +56,7 @@
     <div id="notification">Screenshot saved!</div>
 
  <a-scene
-  mindar-image="imageTargetSrc: marker.mind; updateInterval: 0; stabilizationThreshold: 0; filterMinCF: 0.01; filterBeta: 100; warmupTolerance: 1; missTolerance: 1;
+  mindar-image="imageTargetSrc: marker.mind; updateInterval: 0; stabilizationThreshold: 0; filterMinCF: 0.1; filterBeta: 500; warmupTolerance: 1; missTolerance: 1;
   videoSettings: { width: {ideal: 2560}, height: {ideal: 1440}, facingMode: 'environment' }"
   color-space="sRGB"
   renderer="colorManagement: true; physicallyCorrectLights: true; antialias: true; precision: high"
@@ -73,7 +73,7 @@
 
   <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-  <!-- Target + modelo con suavizado -->
+  <!-- Target + modelo con filtrado avanzado -->
   <a-entity mindar-image-target="targetIndex: 0" smooth-follow>
     <a-gltf-model
       src="#avatarModel"
@@ -85,14 +85,69 @@
 </a-scene>
 
 <script>
+/**
+ * OneEuroFilter implementation
+ * Fuente adaptada de https://github.com/justinfx/oneEuroFilter
+ */
+class OneEuroFilter {
+  constructor(freq=60, mincutoff=1.0, beta=0.0, dcutoff=1.0){
+    this.freq = freq;
+    this.mincutoff = mincutoff;
+    this.beta = beta;
+    this.dcutoff = dcutoff;
+    this.x_prev = null;
+    this.dx_prev = 0;
+    this.lasttime = null;
+  }
+
+  alpha(cutoff){
+    const tau = 1.0 / (2 * Math.PI * cutoff);
+    const te = 1.0 / this.freq;
+    return 1.0 / (1.0 + tau / te);
+  }
+
+  filter(x){
+    let dx = 0;
+    if(this.x_prev !== null){
+      dx = (x - this.x_prev) * this.freq;
+    }
+    const a_d = this.alpha(this.dcutoff);
+    const dx_hat = a_d * dx + (1 - a_d) * this.dx_prev;
+
+    const cutoff = this.mincutoff + this.beta * Math.abs(dx_hat);
+    const a = this.alpha(cutoff);
+
+    const x_hat = this.x_prev === null ? x : a * x + (1 - a) * this.x_prev;
+
+    this.x_prev = x_hat;
+    this.dx_prev = dx_hat;
+    return x_hat;
+  }
+
+  reset(){ this.x_prev = null; this.dx_prev = 0; }
+}
+
 AFRAME.registerComponent('smooth-follow', {
   schema: {
-    lerpFactor: 0.1 // Suavizado de la transición
+    freq: {default: 60},
+    mincutoff: {default: 1.0},
+    beta: {default: 0.01},
+    dcutoff: {default: 1.0},
+    movementThreshold: {default: 0.001} // mínimo cambio para actualizar
   },
   init: function () {
-    this.smoothPosition = new THREE.Vector3();
-    this.smoothQuaternion = new THREE.Quaternion();
-    this.smoothScale = new THREE.Vector3(1, 1, 1);
+    this.lastVisible = false;
+
+    // Filtros OneEuro para cada eje de posición, rotación y escala
+    this.filterPos = [new OneEuroFilter(), new OneEuroFilter(), new OneEuroFilter()];
+    this.filterRot = [new OneEuroFilter(), new OneEuroFilter(), new OneEuroFilter(), new OneEuroFilter()];
+    this.filterScale = [new OneEuroFilter(), new OneEuroFilter(), new OneEuroFilter()];
+
+    this.referenceMatrix = new THREE.Matrix4();
+    this.initialized = false;
+    this.tmpPosition = new THREE.Vector3();
+    this.tmpQuat = new THREE.Quaternion();
+    this.tmpScale = new THREE.Vector3();
   },
   tick: function () {
     const el = this.el;
@@ -105,16 +160,56 @@ AFRAME.registerComponent('smooth-follow', {
     const tracker = mindarComp.controller.trackers.find(t => t.targetIndex === targetIndex);
     if (!tracker || !tracker.visible) return;
 
-    // Descomponer matriz
-    tracker.matrix.decompose(this.smoothPosition, this.smoothQuaternion, this.smoothScale);
+    // Inicializa referencia al plano del marcador la primera vez
+    if(!this.initialized){
+      this.referenceMatrix.copy(tracker.matrix);
+      this.initialized = true;
+    }
 
-    // Aplicar suavizado (interpolación)
-    object3D.position.lerp(this.smoothPosition, this.data.lerpFactor);
-    object3D.quaternion.slerp(this.smoothQuaternion, this.data.lerpFactor);
-    object3D.scale.lerp(this.smoothScale, this.data.lerpFactor);
+    // Descompone la matriz actual del tracker
+    tracker.matrix.decompose(this.tmpPosition, this.tmpQuat, this.tmpScale);
+
+    // Posición relativa al plano de referencia
+    const relPos = new THREE.Vector3().subVectors(this.tmpPosition, this.referenceMatrix.getPosition());
+    const relScale = new THREE.Vector3(
+      this.tmpScale.x / this.referenceMatrix.getMaxScaleOnAxis(),
+      this.tmpScale.y / this.referenceMatrix.getMaxScaleOnAxis(),
+      this.tmpScale.z / this.referenceMatrix.getMaxScaleOnAxis()
+    );
+
+    // Aplica filtrado OneEuro
+    const fPos = new THREE.Vector3(
+      this.filterPos[0].filter(relPos.x),
+      this.filterPos[1].filter(relPos.y),
+      this.filterPos[2].filter(relPos.z)
+    );
+    const fQuat = new THREE.Quaternion(
+      this.filterRot[0].filter(this.tmpQuat.x),
+      this.filterRot[1].filter(this.tmpQuat.y),
+      this.filterRot[2].filter(this.tmpQuat.z),
+      this.filterRot[3].filter(this.tmpQuat.w)
+    );
+    const fScale = new THREE.Vector3(
+      this.filterScale[0].filter(relScale.x),
+      this.filterScale[1].filter(relScale.y),
+      this.filterScale[2].filter(relScale.z)
+    );
+
+    // Bloquea actualización si movimiento es muy pequeño
+    if(fPos.distanceTo(object3D.position) < this.data.movementThreshold &&
+       fQuat.angleTo(object3D.quaternion) < this.data.movementThreshold &&
+       Math.abs(fScale.x - object3D.scale.x) < this.data.movementThreshold){
+      return;
+    }
+
+    // Actualiza transformaciones
+    object3D.position.copy(fPos);
+    object3D.quaternion.copy(fQuat);
+    object3D.scale.copy(fScale);
   }
 });
 </script>
+
 
   </body>
 </html>
