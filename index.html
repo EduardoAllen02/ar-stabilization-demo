@@ -34,7 +34,7 @@
         transform: translateX(-50%);
         width: 70px;
         height: 70px;
-        background-color: #b8b8b880;
+        background-color: #24cec080;
         color: white;
         border: none;
         border-radius: 50%;
@@ -85,66 +85,30 @@
 </a-scene>
 
 <script>
-/**
- * OneEuroFilter implementation
- * Fuente adaptada de https://github.com/justinfx/oneEuroFilter
- */
-class OneEuroFilter {
-  constructor(freq=60, mincutoff=1.0, beta=0.0, dcutoff=1.0){
-    this.freq = freq;
-    this.mincutoff = mincutoff;
-    this.beta = beta;
-    this.dcutoff = dcutoff;
-    this.x_prev = null;
-    this.dx_prev = 0;
-    this.lasttime = null;
-  }
-
-  alpha(cutoff){
-    const tau = 1.0 / (2 * Math.PI * cutoff);
-    const te = 1.0 / this.freq;
-    return 1.0 / (1.0 + tau / te);
-  }
-
-  filter(x){
-    let dx = 0;
-    if(this.x_prev !== null){
-      dx = (x - this.x_prev) * this.freq;
-    }
-    const a_d = this.alpha(this.dcutoff);
-    const dx_hat = a_d * dx + (1 - a_d) * this.dx_prev;
-
-    const cutoff = this.mincutoff + this.beta * Math.abs(dx_hat);
-    const a = this.alpha(cutoff);
-
-    const x_hat = this.x_prev === null ? x : a * x + (1 - a) * this.x_prev;
-
-    this.x_prev = x_hat;
-    this.dx_prev = dx_hat;
-    return x_hat;
-  }
-
-  reset(){ this.x_prev = null; this.dx_prev = 0; }
-}
-
 AFRAME.registerComponent('smooth-follow', {
   schema: {
-    freq: {default: 15}, // frecuencia de actualización (Hz)
-    mincutoff: {default: 5.0}, // corte mínimo del filtro
-    beta: {default: 0.01},  // cuanto más alto, más reactivo al movimiento
-    dcutoff: {default: 2},// suavizado derivada
-    movementThreshold: {default: 0.2} // mínimo cambio para actualizar
+    freq: {default: 15}, 
+    mincutoff: {default: 5.0}, 
+    beta: {default: 0.01},
+    dcutoff: {default: 2},
+    movementThreshold: {default: 0.3}, // mínimo cambio para actualizar
+    frameWindow: {default: 5} // cantidad de frames para promedio móvil
   },
   init: function () {
     this.lastVisible = false;
+    this.referenceMatrix = new THREE.Matrix4();
+    this.initialized = false;
 
-    // Filtros OneEuro para cada eje de posición, rotación y escala
+    // Filtros OneEuro para cada componente
     this.filterPos = [new OneEuroFilter(), new OneEuroFilter(), new OneEuroFilter()];
     this.filterRot = [new OneEuroFilter(), new OneEuroFilter(), new OneEuroFilter(), new OneEuroFilter()];
     this.filterScale = [new OneEuroFilter(), new OneEuroFilter(), new OneEuroFilter()];
 
-    this.referenceMatrix = new THREE.Matrix4();
-    this.initialized = false;
+    // Buffers para promedio móvil
+    this.posBuffer = [];
+    this.quatBuffer = [];
+    this.scaleBuffer = [];
+
     this.tmpPosition = new THREE.Vector3();
     this.tmpQuat = new THREE.Quaternion();
     this.tmpScale = new THREE.Vector3();
@@ -152,7 +116,6 @@ AFRAME.registerComponent('smooth-follow', {
   tick: function () {
     const el = this.el;
     const object3D = el.object3D;
-
     const mindarComp = el.sceneEl.components['mindar-image'];
     if (!mindarComp || !mindarComp.controller || !mindarComp.controller.trackers) return;
 
@@ -160,13 +123,13 @@ AFRAME.registerComponent('smooth-follow', {
     const tracker = mindarComp.controller.trackers.find(t => t.targetIndex === targetIndex);
     if (!tracker || !tracker.visible) return;
 
-    // Inicializa referencia al plano del marcador la primera vez
+    // Inicializa referencia la primera vez
     if(!this.initialized){
       this.referenceMatrix.copy(tracker.matrix);
       this.initialized = true;
     }
 
-    // Descompone la matriz actual del tracker
+    // Descompone matriz actual del tracker
     tracker.matrix.decompose(this.tmpPosition, this.tmpQuat, this.tmpScale);
 
     // Posición relativa al plano de referencia
@@ -177,7 +140,7 @@ AFRAME.registerComponent('smooth-follow', {
       this.tmpScale.z / this.referenceMatrix.getMaxScaleOnAxis()
     );
 
-    // Aplica filtrado OneEuro
+    // Aplica OneEuroFilter
     const fPos = new THREE.Vector3(
       this.filterPos[0].filter(relPos.x),
       this.filterPos[1].filter(relPos.y),
@@ -195,20 +158,42 @@ AFRAME.registerComponent('smooth-follow', {
       this.filterScale[2].filter(relScale.z)
     );
 
-    // Bloquea actualización si movimiento es muy pequeño
-    if(fPos.distanceTo(object3D.position) < this.data.movementThreshold &&
-       fQuat.angleTo(object3D.quaternion) < this.data.movementThreshold &&
-       Math.abs(fScale.x - object3D.scale.x) < this.data.movementThreshold){
+    // Añade a buffers para promedio móvil
+    this.posBuffer.push(fPos.clone());
+    this.quatBuffer.push(fQuat.clone());
+    this.scaleBuffer.push(fScale.clone());
+    if(this.posBuffer.length > this.data.frameWindow) {
+      this.posBuffer.shift();
+      this.quatBuffer.shift();
+      this.scaleBuffer.shift();
+    }
+
+    // Calcula promedio móvil
+    const avgPos = new THREE.Vector3();
+    this.posBuffer.forEach(v => avgPos.add(v));
+    avgPos.divideScalar(this.posBuffer.length);
+
+    const avgQuat = new THREE.Quaternion();
+    this.quatBuffer.forEach(q => avgQuat.slerp(q, 1/this.quatBuffer.length)); // slerp promedio
+    const avgScale = new THREE.Vector3();
+    this.scaleBuffer.forEach(s => avgScale.add(s));
+    avgScale.divideScalar(this.scaleBuffer.length);
+
+    // Bloquea actualización si movimiento muy pequeño
+    if(avgPos.distanceTo(object3D.position) < this.data.movementThreshold &&
+       avgQuat.angleTo(object3D.quaternion) < this.data.movementThreshold &&
+       Math.abs(avgScale.x - object3D.scale.x) < this.data.movementThreshold){
       return;
     }
 
     // Actualiza transformaciones
-    object3D.position.copy(fPos);
-    object3D.quaternion.copy(fQuat);
-    object3D.scale.copy(fScale);
+    object3D.position.copy(avgPos);
+    object3D.quaternion.copy(avgQuat);
+    object3D.scale.copy(avgScale);
   }
 });
 </script>
+
 
 
   </body>
