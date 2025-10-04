@@ -34,7 +34,7 @@
         transform: translateX(-50%);
         width: 70px;
         height: 70px;
-        background-color: rgba(229, 255, 136, 0.5);
+        background-color: rgba(76, 145, 167, 0.5);
         color: white;
         border: none;
         border-radius: 50%;
@@ -87,7 +87,7 @@
 <script>
 AFRAME.registerComponent('smooth-follow', {
   schema: {
-    updateInterval: {default: 500}, // milisegundos entre actualizaciones (0.5s)
+    updateInterval: {default: 5000}, // milisegundos entre actualizaciones (0.5s)
     lerpFactor: {default: 0.15} // suavizado de transición
   },
   init: function () {
