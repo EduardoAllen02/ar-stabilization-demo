@@ -34,7 +34,7 @@
         transform: translateX(-50%);
         width: 70px;
         height: 70px;
-        background-color: rgba(167, 143, 76, 0.5);
+        background-color: rgba(168, 168, 168, 0.5);
         color: white;
         border: none;
         border-radius: 50%;
@@ -131,7 +131,7 @@ AFRAME.registerComponent('smooth-follow', {
   schema: {
     freq: {default: 30}, // frecuencia de actualización (Hz)
     mincutoff: {default: 2.0}, // corte mínimo del filtro
-    beta: {default: 0.005},  // cuanto más alto, más reactivo al movimiento
+    beta: {default: 0.01},  // cuanto más alto, más reactivo al movimiento
     dcutoff: {default: 0.5},// suavizado derivada
     movementThreshold: {default: 0.1} // mínimo cambio para actualizar
   },
