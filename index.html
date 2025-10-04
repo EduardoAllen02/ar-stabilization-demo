@@ -34,7 +34,7 @@
         transform: translateX(-50%);
         width: 70px;
         height: 70px;
-        background-color: rgba(168, 168, 168, 0.5);
+        background-color: #ec808080;
         color: white;
         border: none;
         border-radius: 50%;
@@ -56,7 +56,7 @@
     <div id="notification">Screenshot saved!</div>
 
  <a-scene
-  mindar-image="imageTargetSrc: marker.mind; updateInterval: 0; stabilizationThreshold: 0; filterMinCF: 0.1; filterBeta: 500; warmupTolerance: 1; missTolerance: 1;
+  mindar-image="imageTargetSrc: target.mind; updateInterval: 1; stabilizationThreshold: 0; filterMinCF: 0.1; filterBeta: 500; warmupTolerance: 1; missTolerance: 1;
   videoSettings: { width: {ideal: 2560}, height: {ideal: 1440}, facingMode: 'environment' }"
   color-space="sRGB"
   renderer="colorManagement: true; physicallyCorrectLights: true; antialias: true; precision: high"
@@ -129,10 +129,10 @@ class OneEuroFilter {
 
 AFRAME.registerComponent('smooth-follow', {
   schema: {
-    freq: {default: 30}, // frecuencia de actualización (Hz)
-    mincutoff: {default: 2.0}, // corte mínimo del filtro
+    freq: {default: 15}, // frecuencia de actualización (Hz)
+    mincutoff: {default: 5.0}, // corte mínimo del filtro
     beta: {default: 0.01},  // cuanto más alto, más reactivo al movimiento
-    dcutoff: {default: 0.5},// suavizado derivada
+    dcutoff: {default: 1},// suavizado derivada
     movementThreshold: {default: 0.1} // mínimo cambio para actualizar
   },
   init: function () {
