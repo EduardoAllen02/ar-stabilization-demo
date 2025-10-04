@@ -34,7 +34,7 @@
         transform: translateX(-50%);
         width: 70px;
         height: 70px;
-        background-color: #24cec080;
+        background-color: #b8b8b880;
         color: white;
         border: none;
         border-radius: 50%;
@@ -85,6 +85,47 @@
 </a-scene>
 
 <script>
+/**
+ * OneEuroFilter implementation
+ * Fuente adaptada de https://github.com/justinfx/oneEuroFilter
+ */
+class OneEuroFilter {
+  constructor(freq=60, mincutoff=1.0, beta=0.0, dcutoff=1.0){
+    this.freq = freq;
+    this.mincutoff = mincutoff;
+    this.beta = beta;
+    this.dcutoff = dcutoff;
+    this.x_prev = null;
+    this.dx_prev = 0;
+    this.lasttime = null;
+  }
+
+  alpha(cutoff){
+    const tau = 1.0 / (2 * Math.PI * cutoff);
+    const te = 1.0 / this.freq;
+    return 1.0 / (1.0 + tau / te);
+  }
+
+  filter(x){
+    let dx = 0;
+    if(this.x_prev !== null){
+      dx = (x - this.x_prev) * this.freq;
+    }
+    const a_d = this.alpha(this.dcutoff);
+    const dx_hat = a_d * dx + (1 - a_d) * this.dx_prev;
+
+    const cutoff = this.mincutoff + this.beta * Math.abs(dx_hat);
+    const a = this.alpha(cutoff);
+
+    const x_hat = this.x_prev === null ? x : a * x + (1 - a) * this.x_prev;
+
+    this.x_prev = x_hat;
+    this.dx_prev = dx_hat;
+    return x_hat;
+  }
+
+  reset(){ this.x_prev = null; this.dx_prev = 0; }
+}
 AFRAME.registerComponent('smooth-follow', {
   schema: {
     freq: {default: 15}, 
@@ -192,8 +233,8 @@ AFRAME.registerComponent('smooth-follow', {
     object3D.scale.copy(avgScale);
   }
 });
-</script>
 
+</script>
 
 
   </body>
