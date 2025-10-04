@@ -34,7 +34,7 @@
         transform: translateX(-50%);
         width: 70px;
         height: 70px;
-        background-color: rgba(167, 76, 103, 0.5);
+        background-color: rgba(109, 167, 76, 0.5);
         color: white;
         border: none;
         border-radius: 50%;
@@ -129,11 +129,11 @@ class OneEuroFilter {
 
 AFRAME.registerComponent('smooth-follow', {
   schema: {
-    freq: {default: 60},
-    mincutoff: {default: 1.0},
-    beta: {default: 0.01},
-    dcutoff: {default: 1.0},
-    movementThreshold: {default: 0.001} // mínimo cambio para actualizar
+    freq: {default: 30}, // frecuencia de actualización (Hz)
+    mincutoff: {default: 2.0}, // corte mínimo del filtro
+    beta: {default: 0.01},  // cuanto más alto, más reactivo al movimiento
+    dcutoff: {default: 0.5},// suavizado derivada
+    movementThreshold: {default: 0.01} // mínimo cambio para actualizar
   },
   init: function () {
     this.lastVisible = false;
