@@ -34,7 +34,7 @@
         transform: translateX(-50%);
         width: 70px;
         height: 70px;
-        background-color: rgba(76, 167, 81, 0.5);
+        background-color: rgba(103, 76, 167, 0.5);
         color: white;
         border: none;
         border-radius: 50%;
@@ -87,7 +87,7 @@
 <script>
 AFRAME.registerComponent('smooth-follow', {
   schema: {
-    lerpFactor: { default: 0.2 } // Suavizado de la transición
+    lerpFactor: 0.1 // Suavizado de la transición
   },
   init: function () {
     this.smoothPosition = new THREE.Vector3();
