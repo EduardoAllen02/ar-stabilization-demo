@@ -47,7 +47,7 @@
         font-size: 24px;
         transition: background-color 0.3s ease;
       }
-      .button:active { background-color: rgba(200, 200, 200, 0.7); }
+      .button:active { background-color: rgba(44, 231, 222, 0.7); }
       .recording { border: 3px solid red; box-shadow: 0 0 10px red; }
     </style>
   </head>
@@ -59,7 +59,6 @@
       mindar-image="imageTargetSrc: marker.mind; stabilizationThreshold: 0; filterMinCF: 0.1; filterBeta: 500; warmupTolerance: 1; missTolerance: 1; videoSettings: { width: {ideal: 2560}, height: {ideal: 1440}, facingMode: 'environment' }"
       color-space="sRGB"
       renderer="colorManagement: true, physicallyCorrectLights: true, antialias: true, precision: high"
-      embedded
       vr-mode-ui="enabled: false"
       device-orientation-permission-ui="enabled: false"
       arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false"   
@@ -81,8 +80,7 @@
           src="#avatarModel"
           position="0 0.4 0.1"
           scale="0.008 0.008 0.008"
-          rotation="0 180 0"
-          look-at="[camera]" visible="true">
+          rotation="0 180 0">
         </a-gltf-model>
       </a-entity>
 
